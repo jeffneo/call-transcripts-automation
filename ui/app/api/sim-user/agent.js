@@ -1,3 +1,4 @@
+import { AzureOpenAIEmbeddings, AzureChatOpenAI } from "@langchain/openai";
 import { ChatOpenAI } from "@langchain/openai";
 import { Annotation, StateGraph, START, END } from "@langchain/langgraph";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
@@ -90,34 +91,36 @@ const Agent = (commentId) => {
           })),
         ];
         // Call OpenAI API to validate the latest comment (use fetch)
-        const res = await fetch("https://api.openai.com/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-          },
-          body: JSON.stringify({
-            model: "gpt-4o-mini",
-            messages,
-            response_format: {
-              type: "json_schema",
-              json_schema: {
-                name: "validate_latest_comment",
-                schema: {
-                  type: "object",
-                  properties: {
-                    validated: {
-                      type: "boolean",
-                    },
-                  },
-                  required: ["validated"],
-                  additionalProperties: false,
-                },
-                strict: true,
-              },
+        const res = await fetch(
+          `${process.env.AZURE_OPENAI_ENDPOINT}/openai/deployments/gpt-4o-mini/chat/completions?api-version=${process.env.AZURE_OPENAI_API_VERSION}`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
             },
-          }),
-        });
+            body: JSON.stringify({
+              messages,
+              response_format: {
+                type: "json_schema",
+                json_schema: {
+                  name: "validate_latest_comment",
+                  schema: {
+                    type: "object",
+                    properties: {
+                      validated: {
+                        type: "boolean",
+                      },
+                    },
+                    required: ["validated"],
+                    additionalProperties: false,
+                  },
+                  strict: true,
+                },
+              },
+            }),
+          }
+        );
         const validation = await res.json();
         console.log("Validation:", validation);
         if (validation.validated) {

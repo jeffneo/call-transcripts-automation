@@ -43,6 +43,7 @@ ui/next-env.d.ts
 
 # exclalidraw
 excalidraw
+images
 
 # pycache
 __pycache__
