@@ -8,12 +8,12 @@ const COMMENT_EMBEDDINGS_INDEX_NAME = "commentEmbeddings";
 
 const POST = async (request) => {
   let { comment } = await request.json();
-  console.log("Comment:", comment);
   const neo4jSession = getNeo4jSession();
 
   try {
     const queryResult = await neo4jSession.run(
       `
+      CYPHER runtime=parallel
       WITH genai.vector.encode($content, $provider, { token: $token, model: "text-embedding-3-small", dimensions: 128 }) AS embedding
       CALL db.index.vector.queryNodes($commentEmbeddings, $k, embedding)
       YIELD node AS similarComment
@@ -25,7 +25,6 @@ const POST = async (request) => {
       MATCH (res:ProcessElement:Resolution)
       MATCH p = shortestPath((action)-[:TRANSITION|ACTION_SELECTION|PROCESS_END*]->(res))
       WITH nodes(p) AS nodes, relationships(p) AS rels
-      LIMIT 5
       // Process the paths into the format the frontend expects
       WITH collect(nodes) AS nodes, collect(rels) AS rels
       WITH apoc.coll.toSet(apoc.coll.flatten(nodes)) AS nodes, apoc.coll.toSet(apoc.coll.flatten(rels)) AS rels
@@ -53,6 +52,7 @@ const POST = async (request) => {
         commentEmbeddings: COMMENT_EMBEDDINGS_INDEX_NAME,
       }
     );
+
     const result = queryResult.records.map((record) => ({
       nodes: record.get("nodes"),
       rels: record.get("rels"),
